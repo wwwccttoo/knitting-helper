@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>毛衣织造助手</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700&family=Noto+Sans+SC:wght@300;400;500;700&display=swap');
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: 'Noto Sans SC', -apple-system, sans-serif;
+  background: linear-gradient(160deg, #fdf6f0 0%, #f0e6d8 40%, #e8ddd0 100%);
+  min-height: 100vh;
+  color: #3a3028;
+}
+
+/* 导航 */
+.navbar {
+  background: rgba(255,255,255,0.85);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(200,180,160,0.2);
+  padding: 14px 40px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.nav-left { display: flex; align-items: center; gap: 20px; }
+.logo {
+  font-family: 'Noto Serif SC', serif;
+  font-size: 1.3em;
+  font-weight: 700;
+  color: #8b6940;
+}
+.logo span { font-size: 1.2em; margin-right: 4px; }
+.nav-right { display: flex; align-items: center; gap: 16px; }
+.user-badge {
+  background: #f5ede5;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 0.9em;
+  color: #8b6940;
+  font-weight: 500;
+}
+.logout-btn {
+  color: #b0a090;
+  text-decoration: none;
+  font-size: 0.9em;
+}
+.logout-btn:hover { color: #8b6940; }
+
+/* Tab 切换 */
+.tabs {
+  display: flex;
+  gap: 0;
+  max-width: 1100px;
+  margin: 24px auto 0;
+  padding: 0 20px;
+}
+.tab-btn {
+  padding: 12px 28px;
+  border: none;
+  background: rgba(255,255,255,0.5);
+  font-family: inherit;
+  font-size: 1em;
+  font-weight: 500;
+  color: #a09080;
+  cursor: pointer;
+  border-radius: 14px 14px 0 0;
+  transition: all 0.2s;
+}
+.tab-btn.active {
+  background: white;
+  color: #6b4f35;
+  box-shadow: 0 -2px 10px rgba(0,0,0,0.03);
+}
+
+/* Tab 内容 */
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+
+/* ─── 搜索 Tab ─── */
+.search-page {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0 20px 60px;
+}
+.search-panel {
+  background: white;
+  border-radius: 0 20px 20px 20px;
+  padding: 36px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+  margin-bottom: 32px;
+}
+.search-row {
+  display: flex;
+  gap: 12px;
+  align-items: flex-end;
+}
+.search-row .field { flex: 1; }
+.search-row .field-api { flex: 0.8; }
+.field label {
+  display: block;
+  font-weight: 500;
+  margin-bottom: 6px;
+  color: #6b5a48;
+  font-size: 0.88em;
+}
+.field input {
+  width: 100%;
+  padding: 12px 16px;
+  border: 2px solid #e8ddd0;
+  border-radius: 12px;
+  font-size: 1em;
+  font-family: inherit;
+  outline: none;
+  background: #faf8f5;
+  transition: border-color 0.3s;
+}
+.field input:focus { border-color: #d4a574; background: white; }
+.search-btn {
+  padding: 12px 28px;
+  background: linear-gradient(135deg, #d4a574, #c4956a);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-size: 1em;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.3s;
+  white-space: nowrap;
+  height: 46px;
+}
+.search-btn:hover {
+  background: linear-gradient(135deg, #c4956a, #b4855a);
+  transform: translateY(-1px);
+}
+.search-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+@media (max-width: 700px) {
+  .search-row { flex-direction: column; }
+}
+
+/* ─── 卡片网格（共用） ─── */
+.section-title {
+  font-family: 'Noto Serif SC', serif;
+  font-size: 1.5em;
+  color: #6b4f35;
+  margin-bottom: 8px;
+}
+.section-sub { color: #a09080; margin-bottom: 24px; font-size: 0.95em; }
+
+.cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(310px, 1fr));
+  gap: 22px;
+}
+
+.card {
+  background: white;
+  border-radius: 18px;
+  overflow: hidden;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+  border: 1px solid rgba(200,180,160,0.12);
+  transition: all 0.35s cubic-bezier(0.4,0,0.2,1);
+  cursor: pointer;
+  text-decoration: none;
+  color: inherit;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+.card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 12px 36px rgba(180,140,100,0.18);
+}
+.card-img-wrap {
+  width: 100%;
+  height: 210px;
+  overflow: hidden;
+  background: linear-gradient(135deg, #f5ede5, #efe3d6);
+  position: relative;
+}
+.card-img-wrap img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.4s;
+}
+.card:hover .card-img-wrap img { transform: scale(1.05); }
+.card-img-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 3.5em;
+}
+.card-body {
+  padding: 20px 22px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+.card-body h3 {
+  font-family: 'Noto Serif SC', serif;
+  font-size: 1.2em;
+  color: #5a4430;
+  margin-bottom: 6px;
+}
+.card-body .subtitle {
+  color: #8a7a6a;
+  font-size: 0.9em;
+  margin-bottom: 14px;
+  line-height: 1.5;
+  flex: 1;
+}
+.card-tags {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.tag {
+  font-size: 0.78em;
+  padding: 4px 10px;
+  border-radius: 16px;
+  font-weight: 500;
+}
+.tag-diff { background: #fff3e6; color: #c4856a; }
+.tag-time { background: #e8f4e8; color: #5a8a50; }
+.tag-steps { background: #e8eef8; color: #5a6a8a; }
+.card-footer {
+  padding: 0 22px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.card-detail-link {
+  font-size: 0.88em;
+  color: #d4a574;
+  font-weight: 500;
+}
+
+/* 保存按钮（卡片上） */
+.save-btn {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.9);
+  backdrop-filter: blur(4px);
+  border: none;
+  font-size: 1.2em;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  z-index: 2;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+.save-btn:hover { transform: scale(1.15); }
+.save-btn.saved { background: #d4a574; color: white; }
+
+/* 已保存卡片的删除按钮 */
+.delete-btn {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.9);
+  border: none;
+  font-size: 1em;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  opacity: 0;
+  transition: all 0.2s;
+}
+.card:hover .delete-btn { opacity: 1; }
+.delete-btn:hover { background: #e74c3c; color: white; }
+
+/* 日期标签 */
+.card-date {
+  font-size: 0.78em;
+  color: #b0a090;
+}
+
+/* ─── Loading ─── */
+.loading-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(253,246,240,0.92);
+  backdrop-filter: blur(8px);
+  z-index: 200;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+.loading-overlay.active { display: flex; }
+.spinner {
+  width: 70px; height: 70px;
+  border: 4px solid #e8ddd0;
+  border-top-color: #d4a574;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 20px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.loading-text {
+  font-size: 1.15em;
+  color: #8b6940;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+@keyframes pulse { 50% { opacity: 0.5; } }
+.loading-steps { margin-top: 14px; font-size: 0.9em; color: #b0a090; }
+.loading-steps .step { padding: 3px 0; transition: 0.3s; }
+.loading-steps .step.active { color: #8b6940; font-weight: 500; }
+.loading-steps .step.done { color: #6b9a5a; }
+.loading-steps .step.done::before { content: '✓ '; }
+
+/* 空状态 */
+.empty-state {
+  text-align: center;
+  padding: 60px 20px;
+  color: #b0a090;
+}
+.empty-state .icon { font-size: 3em; margin-bottom: 12px; }
+.empty-state p { font-size: 1.05em; }
+
+/* 错误提示 */
+.toast {
+  display: none;
+  position: fixed;
+  top: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 12px 28px;
+  border-radius: 12px;
+  font-size: 0.95em;
+  z-index: 300;
+  max-width: 500px;
+  text-align: center;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+}
+.toast.error { background: #e74c3c; color: white; }
+.toast.success { background: #27ae60; color: white; }
+.toast.active { display: block; animation: slideDown 0.3s ease-out; }
+@keyframes slideDown { from { opacity: 0; transform: translate(-50%,-20px); } }
+</style>
+</head>
+<body>
+
+<nav class="navbar">
+  <div class="nav-left">
+    <div class="logo"><span>🧶</span>毛衣织造助手</div>
+  </div>
+  <div class="nav-right">
+    <span class="user-badge">👤 {{ username }}</span>
+    <a class="logout-btn" href="/logout">退出</a>
+  </div>
+</nav>
+
+<!-- Tab 切换 -->
+<div class="tabs">
+  <button class="tab-btn active" onclick="switchTab('search')">🔍 搜索生成</button>
+  <button class="tab-btn" onclick="switchTab('saved')">📚 我的收藏 <span id="savedCount">({{ saved_cards|length }})</span></button>
+</div>
+
+<!-- ═══ 搜索 Tab ═══ -->
+<div class="tab-content active" id="tab-search">
+  <div class="search-page">
+    <div class="search-panel">
+      <div class="search-row">
+        <div class="field">
+          <label>🔍 想织什么？</label>
+          <input type="text" id="keyword" placeholder="例如：麻花毛衣、渔夫毛衣、婴儿开衫、阿兰花样围巾..." autofocus>
+        </div>
+        <div class="field field-api">
+          <label>🔑 DeepSeek API Key</label>
+          <input type="password" id="apiKey" placeholder="sk-xxxxxxxx">
+        </div>
+        <button class="search-btn" id="searchBtn" onclick="doSearch()">搜索生成</button>
+      </div>
+    </div>
+
+    <!-- 搜索结果区 -->
+    <div id="resultsArea" style="display:none;">
+      <h2 class="section-title" id="resultsTitle"></h2>
+      <p class="section-sub" id="resultsSub"></p>
+      <div class="cards-grid" id="resultsGrid"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ 收藏 Tab ═══ -->
+<div class="tab-content" id="tab-saved">
+  <div class="search-page">
+    {% if saved_cards %}
+    <h2 class="section-title" style="margin-top:24px;">我的收藏</h2>
+    <p class="section-sub">共 {{ saved_cards|length }} 张卡片</p>
+    <div class="cards-grid" id="savedGrid">
+      {% for c in saved_cards %}
+      <div class="card" id="saved-{{ c.id }}">
+        <button class="delete-btn" onclick="event.stopPropagation(); deleteCard('{{ c.id }}')" title="删除">🗑</button>
+        <a href="/card/{{ c.id }}" style="text-decoration:none;color:inherit;">
+          <div class="card-img-wrap">
+            {% if c.image %}
+            <img src="{{ c.image }}" alt="{{ c.title }}" onerror="this.outerHTML='<div class=\'card-img-placeholder\'>🧶</div>'">
+            {% else %}
+            <div class="card-img-placeholder">🧶</div>
+            {% endif %}
+          </div>
+          <div class="card-body">
+            <h3>{{ c.title }}</h3>
+            <p class="subtitle">关键词：{{ c.keyword }}</p>
+            <div class="card-tags">
+              <span class="tag tag-diff">{{ c.difficulty }}</span>
+              <span class="tag tag-time">{{ c.estimated_time }}</span>
+              <span class="tag tag-steps">{{ c.steps_count }} 个阶段</span>
+            </div>
+          </div>
+          <div class="card-footer">
+            <span class="card-date">{{ c.created_at }}</span>
+            <span class="card-detail-link">查看详情 →</span>
+          </div>
+        </a>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+      <div class="icon">📭</div>
+      <p>还没有收藏任何卡片</p>
+      <p style="font-size:0.9em;margin-top:8px;">搜索生成后点击卡片上的 ❤ 按钮即可收藏</p>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Loading -->
+<div class="loading-overlay" id="loading">
+  <div class="spinner"></div>
+  <div class="loading-text">正在为你编织灵感...</div>
+  <div class="loading-steps">
+    <div class="step" id="ls1">📡 搜索网络资料</div>
+    <div class="step" id="ls2">🖼 搜索相关图片</div>
+    <div class="step" id="ls3">🤖 AI 分析织造方法</div>
+    <div class="step" id="ls4">🎨 生成制作过程卡片</div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+// API key 持久化
+const apiKeyInput = document.getElementById('apiKey');
+const saved = localStorage.getItem('deepseek_api_key');
+if (saved) apiKeyInput.value = saved;
+
+// Tab 切换
+function switchTab(name) {
+  document.querySelectorAll('.tab-btn').forEach((b, i) => {
+    b.classList.toggle('active', (name === 'search' && i === 0) || (name === 'saved' && i === 1));
+  });
+  document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+}
+
+// Toast
+function showToast(msg, type) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'toast ' + type + ' active';
+  setTimeout(() => el.classList.remove('active'), 3500);
+}
+
+function setStep(n) {
+  for (let i = 1; i <= 4; i++) {
+    const el = document.getElementById('ls' + i);
+    el.className = 'step' + (i < n ? ' done' : i === n ? ' active' : '');
+  }
+}
+
+// 回车搜索
+document.getElementById('keyword').addEventListener('keydown', e => {
+  if (e.key === 'Enter') doSearch();
+});
+
+// 全局缓存当前搜索结果
+let currentCards = [];
+let currentKeyword = '';
+
+async function doSearch() {
+  const keyword = document.getElementById('keyword').value.trim();
+  const apiKey = apiKeyInput.value.trim();
+  if (!keyword) { showToast('请输入搜索关键词', 'error'); return; }
+  if (!apiKey) { showToast('请输入 DeepSeek API Key', 'error'); return; }
+
+  localStorage.setItem('deepseek_api_key', apiKey);
+
+  const btn = document.getElementById('searchBtn');
+  const loading = document.getElementById('loading');
+  btn.disabled = true;
+  loading.classList.add('active');
+  setStep(1);
+  setTimeout(() => setStep(2), 2500);
+  setTimeout(() => setStep(3), 6000);
+  setTimeout(() => setStep(4), 15000);
+
+  try {
+    const fd = new FormData();
+    fd.append('keyword', keyword);
+    fd.append('api_key', apiKey);
+    const resp = await fetch('/search', { method: 'POST', body: fd });
+    const data = await resp.json();
+    if (!resp.ok) throw new Error(data.error || '请求失败');
+
+    currentCards = data.cards;
+    currentKeyword = data.keyword;
+
+    // 临时存储到后端
+    await fetch('/api/store_temp', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ cards: data.cards })
+    });
+
+    renderResults(data.cards, data.keyword);
+  } catch (e) {
+    showToast(e.message, 'error');
+  } finally {
+    loading.classList.remove('active');
+    btn.disabled = false;
+  }
+}
+
+function renderResults(cards, keyword) {
+  const area = document.getElementById('resultsArea');
+  const grid = document.getElementById('resultsGrid');
+  document.getElementById('resultsTitle').textContent = `「${keyword}」织造方案`;
+  document.getElementById('resultsSub').textContent = `为你生成了 ${cards.length} 种方案，点击 ❤ 收藏，点击卡片查看详情`;
+  grid.innerHTML = '';
+
+  cards.forEach((card, idx) => {
+    const imgHtml = card.image
+      ? `<img src="${card.image}" alt="${card.title}" onerror="this.outerHTML='<div class=\\'card-img-placeholder\\'>🧶</div>'">`
+      : `<div class="card-img-placeholder">🧶</div>`;
+
+    const el = document.createElement('div');
+    el.className = 'card';
+    el.innerHTML = `
+      <button class="save-btn" onclick="event.stopPropagation(); saveCard('${card.id}', ${idx})" title="收藏" id="savebtn-${card.id}">🤍</button>
+      <a href="/card/${card.id}" style="text-decoration:none;color:inherit;">
+        <div class="card-img-wrap">${imgHtml}</div>
+        <div class="card-body">
+          <h3>${card.title}</h3>
+          <p class="subtitle">${card.subtitle || ''}</p>
+          <div class="card-tags">
+            <span class="tag tag-diff">${card.difficulty}</span>
+            <span class="tag tag-time">${card.estimated_time}</span>
+            <span class="tag tag-steps">${(card.steps||[]).length} 个阶段</span>
+          </div>
+        </div>
+        <div class="card-footer">
+          <span></span>
+          <span class="card-detail-link">查看详情 →</span>
+        </div>
+      </a>
+    `;
+    grid.appendChild(el);
+  });
+
+  area.style.display = 'block';
+}
+
+async function saveCard(cardId, idx) {
+  const card = currentCards[idx];
+  try {
+    const resp = await fetch('/save_card', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ card_id: cardId, card_data: card, keyword: currentKeyword })
+    });
+    const data = await resp.json();
+    if (data.saved) {
+      const btn = document.getElementById('savebtn-' + cardId);
+      btn.textContent = '❤️';
+      btn.classList.add('saved');
+      showToast('已收藏！', 'success');
+      // 更新计数
+      const countEl = document.getElementById('savedCount');
+      const cur = parseInt(countEl.textContent.match(/\d+/)?.[0] || '0');
+      countEl.textContent = `(${cur + 1})`;
+    }
+  } catch (e) {
+    showToast('保存失败: ' + e.message, 'error');
+  }
+}
+
+async function deleteCard(cardId) {
+  if (!confirm('确定要删除这张卡片吗？')) return;
+  try {
+    await fetch('/delete_card', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ card_id: cardId })
+    });
+    const el = document.getElementById('saved-' + cardId);
+    if (el) { el.style.transition = '0.3s'; el.style.opacity = '0'; setTimeout(() => el.remove(), 300); }
+    showToast('已删除', 'success');
+  } catch (e) {
+    showToast('删除失败', 'error');
+  }
+}
+</script>
+</body>
+</html>

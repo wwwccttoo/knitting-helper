@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{ card.title }} - 织造详情</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700&family=Noto+Sans+SC:wght@300;400;500;700&display=swap');
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: 'Noto Sans SC', -apple-system, sans-serif;
+  background: linear-gradient(160deg, #fdf6f0 0%, #f0e6d8 40%, #e8ddd0 100%);
+  min-height: 100vh;
+  color: #3a3028;
+}
+.navbar {
+  background: rgba(255,255,255,0.85);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(200,180,160,0.2);
+  padding: 14px 40px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.nav-left { display: flex; align-items: center; gap: 16px; }
+.back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #8b6940;
+  text-decoration: none;
+  font-weight: 500;
+  font-size: 0.9em;
+  padding: 8px 14px;
+  border-radius: 10px;
+  transition: background 0.2s;
+}
+.back-btn:hover { background: rgba(212,165,116,0.1); }
+.nav-logo {
+  font-family: 'Noto Serif SC', serif;
+  font-size: 1.2em;
+  font-weight: 700;
+  color: #8b6940;
+}
+.nav-right { display: flex; align-items: center; gap: 12px; }
+.user-badge {
+  background: #f5ede5;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 0.85em;
+  color: #8b6940;
+}
+
+.content { max-width: 900px; margin: 0 auto; padding: 0 20px 60px; }
+
+/* Hero */
+.detail-hero {
+  position: relative;
+  margin: -1px -20px 28px;
+  border-radius: 0 0 28px 28px;
+  overflow: hidden;
+}
+.hero-image {
+  width: 100%;
+  height: 380px;
+  object-fit: cover;
+  display: block;
+}
+.hero-placeholder {
+  width: 100%;
+  height: 380px;
+  background: linear-gradient(145deg, #d4a574, #c4956a);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 5em;
+}
+.hero-overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(transparent, rgba(0,0,0,0.7));
+  padding: 60px 36px 32px;
+  color: white;
+}
+.hero-overlay h1 {
+  font-family: 'Noto Serif SC', serif;
+  font-size: 2.2em;
+  margin-bottom: 6px;
+  text-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
+.hero-overlay .subtitle { font-size: 1.05em; opacity: 0.9; margin-bottom: 14px; }
+.hero-meta { display: flex; gap: 12px; flex-wrap: wrap; }
+.hero-tag {
+  background: rgba(255,255,255,0.2);
+  backdrop-filter: blur(4px);
+  border-radius: 8px;
+  padding: 6px 14px;
+  font-size: 0.85em;
+  font-weight: 500;
+}
+
+/* Sections */
+.section {
+  background: white;
+  border-radius: 18px;
+  padding: 28px 32px;
+  margin-bottom: 18px;
+  box-shadow: 0 3px 16px rgba(0,0,0,0.04);
+  border: 1px solid rgba(200,180,160,0.12);
+}
+.section h2 {
+  font-family: 'Noto Serif SC', serif;
+  font-size: 1.35em;
+  color: #8b6940;
+  margin-bottom: 18px;
+  padding-bottom: 10px;
+  border-bottom: 2px solid #f0e6d8;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.materials-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 10px;
+}
+.material-item {
+  background: #faf6f2;
+  border-radius: 10px;
+  padding: 14px;
+  border-left: 4px solid #d4a574;
+}
+.material-name { font-weight: 600; color: #6b4f35; font-size: 0.95em; }
+.material-detail { font-size: 0.85em; color: #8a7a6a; margin-top: 3px; }
+
+.tools-list { display: flex; flex-wrap: wrap; gap: 8px; }
+.tool-tag {
+  background: linear-gradient(135deg, #f5ede5, #efe3d6);
+  border-radius: 18px;
+  padding: 7px 16px;
+  font-size: 0.9em;
+  color: #6b4f35;
+  border: 1px solid #e0d0c0;
+}
+
+.gauge-box {
+  background: linear-gradient(135deg, #f5ede5, #efe3d6);
+  border-radius: 10px;
+  padding: 16px 20px;
+  text-align: center;
+  font-size: 1.05em;
+  color: #6b4f35;
+  border: 1px dashed #d4a574;
+}
+
+.abbr-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 6px;
+}
+.abbr-item { display: flex; gap: 8px; align-items: baseline; padding: 5px 0; }
+.abbr-code {
+  background: #8b6940;
+  color: white;
+  border-radius: 5px;
+  padding: 2px 8px;
+  font-weight: 600;
+  font-size: 0.85em;
+  white-space: nowrap;
+}
+.abbr-desc { color: #6b5a48; font-size: 0.85em; }
+
+/* 步骤 */
+.step-phase {
+  background: #faf6f2;
+  border-radius: 14px;
+  padding: 24px;
+  margin-bottom: 14px;
+  border: 1px solid #efe3d6;
+}
+.phase-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.phase-number {
+  background: linear-gradient(135deg, #d4a574, #b8895a);
+  color: white;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 1.15em;
+  flex-shrink: 0;
+}
+.phase-title {
+  font-family: 'Noto Serif SC', serif;
+  font-size: 1.15em;
+  color: #6b4f35;
+  font-weight: 600;
+}
+
+/* 步骤图片 */
+.step-image-wrap {
+  margin: 0 0 16px 56px;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+}
+.step-image {
+  width: 100%;
+  max-height: 260px;
+  object-fit: cover;
+  display: block;
+}
+
+.instruction-list {
+  list-style: none;
+  padding-left: 56px;
+}
+.instruction-list li {
+  position: relative;
+  padding: 8px 0 8px 24px;
+  line-height: 1.7;
+  color: #4a3f34;
+}
+.instruction-list li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 16px;
+  width: 8px;
+  height: 8px;
+  background: #d4a574;
+  border-radius: 50%;
+}
+
+.phase-tip {
+  margin-top: 14px;
+  margin-left: 56px;
+  background: #fff8f0;
+  border-left: 3px solid #e6a84d;
+  border-radius: 0 8px 8px 0;
+  padding: 12px 16px;
+  font-size: 0.9em;
+  color: #8a6b3a;
+  line-height: 1.6;
+}
+.phase-tip::before { content: '💡 '; font-weight: 600; }
+
+.info-list { list-style: none; }
+.info-list li {
+  padding: 10px 0 10px 28px;
+  position: relative;
+  line-height: 1.6;
+  border-bottom: 1px solid #f5f0ea;
+}
+.info-list li:last-child { border-bottom: none; }
+.info-list.finishing li::before { content: '🪡'; position: absolute; left: 0; }
+.info-list.tips li::before { content: '✨'; position: absolute; left: 0; }
+.info-list.variations li::before { content: '🎨'; position: absolute; left: 0; }
+
+.action-bar {
+  text-align: center;
+  margin-top: 28px;
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+.action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 12px 24px;
+  border-radius: 12px;
+  font-size: 0.95em;
+  font-family: inherit;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s;
+  border: 2px solid #d4a574;
+  background: white;
+  color: #d4a574;
+}
+.action-btn:hover { background: #d4a574; color: white; }
+.action-btn.primary {
+  background: linear-gradient(135deg, #d4a574, #c4956a);
+  color: white;
+  border-color: transparent;
+}
+.action-btn.primary:hover { background: linear-gradient(135deg, #c4956a, #b4855a); }
+
+.footer {
+  text-align: center;
+  padding: 28px;
+  color: #b0a090;
+  font-size: 0.82em;
+}
+
+.toast {
+  display: none;
+  position: fixed;
+  top: 70px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 10px 24px;
+  border-radius: 10px;
+  font-size: 0.9em;
+  z-index: 300;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+}
+.toast.success { background: #27ae60; color: white; }
+.toast.active { display: block; animation: slideDown 0.3s ease-out; }
+@keyframes slideDown { from { opacity:0; transform:translate(-50%,-20px); } }
+
+@media print {
+  .navbar, .action-bar { display: none !important; }
+  body { background: white; }
+  .section { box-shadow: none; border: 1px solid #ddd; break-inside: avoid; }
+}
+
+@media (max-width: 600px) {
+  .hero-overlay { padding: 30px 20px 20px; }
+  .hero-overlay h1 { font-size: 1.6em; }
+  .section { padding: 20px 16px; }
+  .instruction-list { padding-left: 16px; }
+  .phase-tip, .step-image-wrap { margin-left: 16px; }
+}
+</style>
+</head>
+<body>
+
+<nav class="navbar">
+  <div class="nav-left">
+    <a class="back-btn" href="/">← 返回</a>
+    <span class="nav-logo">🧶 毛衣织造助手</span>
+  </div>
+  <div class="nav-right">
+    <span class="user-badge">👤 {{ username }}</span>
+  </div>
+</nav>
+
+<div class="content">
+  <!-- Hero -->
+  <div class="detail-hero">
+    {% if card.image %}
+    <img class="hero-image" src="{{ card.image }}" alt="{{ card.title }}"
+         onerror="this.outerHTML='<div class=\'hero-placeholder\'>🧶</div>'">
+    {% else %}
+    <div class="hero-placeholder">🧶</div>
+    {% endif %}
+    <div class="hero-overlay">
+      <h1>{{ card.title }}</h1>
+      {% if card.subtitle %}<p class="subtitle">{{ card.subtitle }}</p>{% endif %}
+      <div class="hero-meta">
+        <span class="hero-tag">{{ card.difficulty }}</span>
+        <span class="hero-tag">⏱ {{ card.estimated_time }}</span>
+        <span class="hero-tag">📋 {{ card.steps|length }} 个阶段</span>
+      </div>
+    </div>
+  </div>
+
+  {% if card.gauge %}
+  <div class="section">
+    <h2>📐 编织密度</h2>
+    <div class="gauge-box">{{ card.gauge }}</div>
+  </div>
+  {% endif %}
+
+  {% if card.materials %}
+  <div class="section">
+    <h2>🧵 所需材料</h2>
+    <div class="materials-grid">
+      {% for m in card.materials %}
+      <div class="material-item">
+        <div class="material-name">{{ m.name }}</div>
+        <div class="material-detail">{{ m.spec }} · {{ m.quantity }}</div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  {% if card.tools %}
+  <div class="section">
+    <h2>🔧 所需工具</h2>
+    <div class="tools-list">
+      {% for t in card.tools %}
+      <span class="tool-tag">{{ t }}</span>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  {% if card.abbreviations %}
+  <div class="section">
+    <h2>📖 术语缩写</h2>
+    <div class="abbr-grid">
+      {% for a in card.abbreviations %}
+      <div class="abbr-item">
+        <span class="abbr-code">{{ a.abbr }}</span>
+        <span class="abbr-desc">{{ a.full }}</span>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="section">
+    <h2>🧶 织造步骤</h2>
+    {% for step in card.steps %}
+    <div class="step-phase">
+      <div class="phase-header">
+        <div class="phase-number">{{ loop.index }}</div>
+        <div class="phase-title">{{ step.phase }}</div>
+      </div>
+      {% if step.image %}
+      <div class="step-image-wrap">
+        <img class="step-image" src="{{ step.image }}" alt="{{ step.phase }}"
+             onerror="this.parentElement.style.display='none'">
+      </div>
+      {% endif %}
+      <ul class="instruction-list">
+        {% for inst in step.instructions %}
+        <li>{{ inst }}</li>
+        {% endfor %}
+      </ul>
+      {% if step.tips %}
+      <div class="phase-tip">{{ step.tips }}</div>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+
+  {% if card.finishing %}
+  <div class="section">
+    <h2>🪡 收尾工作</h2>
+    <ul class="info-list finishing">
+      {% for f in card.finishing %}
+      <li>{{ f }}</li>
+      {% endfor %}
+    </ul>
+  </div>
+  {% endif %}
+
+  {% if card.tips %}
+  <div class="section">
+    <h2>✨ 实用技巧</h2>
+    <ul class="info-list tips">
+      {% for tip in card.tips %}
+      <li>{{ tip }}</li>
+      {% endfor %}
+    </ul>
+  </div>
+  {% endif %}
+
+  {% if card.variations %}
+  <div class="section">
+    <h2>🎨 款式变化</h2>
+    <ul class="info-list variations">
+      {% for v in card.variations %}
+      <li>{{ v }}</li>
+      {% endfor %}
+    </ul>
+  </div>
+  {% endif %}
+
+  <div class="action-bar">
+    {% if not card.saved %}
+    <button class="action-btn primary" id="saveDetailBtn" onclick="saveFromDetail()">❤ 收藏此卡片</button>
+    {% else %}
+    <button class="action-btn" disabled style="opacity:0.6;">已收藏 ✓</button>
+    {% endif %}
+    <button class="action-btn" onclick="window.print()">🖨 打印</button>
+  </div>
+
+  <div class="footer">由「毛衣织造助手」自动生成</div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+async function saveFromDetail() {
+  const cardId = "{{ card.id }}";
+  try {
+    const resp = await fetch('/save_card', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        card_id: cardId,
+        card_data: {{ card | tojson }},
+        keyword: "{{ card.title }}"
+      })
+    });
+    const data = await resp.json();
+    if (data.saved) {
+      const btn = document.getElementById('saveDetailBtn');
+      btn.textContent = '已收藏 ✓';
+      btn.disabled = true;
+      btn.style.opacity = '0.6';
+      const t = document.getElementById('toast');
+      t.textContent = '收藏成功！';
+      t.className = 'toast success active';
+      setTimeout(() => t.classList.remove('active'), 2500);
+    }
+  } catch (e) {
+    alert('保存失败: ' + e.message);
+  }
+}
+</script>
+</body>
+</html>
