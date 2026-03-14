@@ -11,10 +11,10 @@ import re
 import hashlib
 import sqlite3
 import time
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 from pathlib import Path
 from functools import wraps
-from urllib.parse import quote_plus
 
 import requests
 from bs4 import BeautifulSoup
@@ -223,55 +223,21 @@ def search_web(keyword):
 # AI 分析
 # ═══════════════════════════════════════════════════════════════════════════
 
-def ai_generate(keyword, raw_content, api_key):
-    """DeepSeek 生成结构化织造数据"""
+def _generate_one_card(keyword, raw_content, api_key, style_hint):
+    """生成单张卡片（用于并行调用）"""
     client = OpenAI(api_key=api_key, base_url="https://api.deepseek.com")
 
-    prompt = f"""你是一位经验丰富的编织专家和手工艺教师。用户想学习「{keyword}」的编织/织造方法。
+    prompt = f"""你是编织专家。请为「{keyword}」生成一份{style_hint}的编织方案。
+参考资料：{raw_content[:1500] if raw_content else "用你的知识"}
 
-以下是从网上搜集到的资料：
-<资料>
-{raw_content if raw_content else "（未搜集到资料，请使用你的知识）"}
-</资料>
+直接输出JSON，不要其他文字：
+{{"title":"款式名","subtitle":"一句话描述","difficulty":"入门/初级/中级/高级","estimated_time":"时间","materials":[{{"name":"","spec":"","quantity":""}}],"tools":[""],"gauge":"密度","steps":[{{"phase":"阶段名","instructions":["步骤"],"tips":"技巧"}}],"finishing":["收尾"],"tips":["技巧"],"variations":["变化"]}}
 
-请生成 3 种不同的「{keyword}」款式/方案（难度、风格、织法要有明显区别）。
-
-**重要**：每个步骤的 phase 名称要具体且独特（如"起针与底边罗纹"而不只是"准备"），因为我会根据 phase 名称去搜索对应的图片。
-
-请严格按以下 JSON 格式输出（不要输出其他内容）：
-
-{{
-  "cards": [
-    {{
-      "title": "款式名称",
-      "subtitle": "一句话描述这个款式的特点",
-      "difficulty": "入门/初级/中级/高级",
-      "estimated_time": "预估时间",
-      "materials": [
-        {{"name": "材料", "spec": "规格", "quantity": "用量"}}
-      ],
-      "tools": ["工具1", "工具2"],
-      "gauge": "编织密度",
-      "abbreviations": [
-        {{"abbr": "缩写", "full": "说明"}}
-      ],
-      "steps": [
-        {{
-          "phase": "具体阶段名（如：起针与底边罗纹编织）",
-          "instructions": ["详细步骤1（包含针数行数）", "步骤2"],
-          "tips": "该阶段技巧"
-        }}
-      ],
-      "finishing": ["收尾1", "收尾2"],
-      "tips": ["技巧1", "技巧2"],
-      "variations": ["变化1"]
-    }}
-  ]
-}}"""
+要求：steps 限 3-4 个阶段，每阶段 instructions 限 2-3 条，每条简洁但包含关键针数。"""
 
     response = client.chat.completions.create(
         model="deepseek-chat",
-        max_tokens=8000,
+        max_tokens=2500,
         messages=[{"role": "user", "content": prompt}],
     )
 
@@ -281,22 +247,26 @@ def ai_generate(keyword, raw_content, api_key):
     elif "```" in text:
         text = text.split("```")[1].split("```")[0].strip()
 
-    try:
-        data = json.loads(text)
-    except json.JSONDecodeError:
-        fix = client.chat.completions.create(
-            model="deepseek-chat",
-            max_tokens=8000,
-            messages=[{"role": "user", "content": f"修复此JSON，只输出合法JSON：\n{text}"}],
-        )
-        fix_text = fix.choices[0].message.content.strip()
-        if "```json" in fix_text:
-            fix_text = fix_text.split("```json")[1].split("```")[0].strip()
-        elif "```" in fix_text:
-            fix_text = fix_text.split("```")[1].split("```")[0].strip()
-        data = json.loads(fix_text)
+    return json.loads(text)
 
-    return data.get("cards", [])
+
+def ai_generate(keyword, raw_content, api_key):
+    """并行生成 3 张卡片"""
+    styles = ["简单入门级", "经典中级", "进阶花样级"]
+
+    with ThreadPoolExecutor(max_workers=3) as pool:
+        futures = [
+            pool.submit(_generate_one_card, keyword, raw_content, api_key, s)
+            for s in styles
+        ]
+        cards = []
+        for f in futures:
+            try:
+                cards.append(f.result(timeout=60))
+            except Exception:
+                pass
+
+    return cards
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -399,14 +369,15 @@ def search():
     db.commit()
 
     try:
-        # 1. 搜索文字
-        raw_content = search_web(keyword)
+        # 1. 并行：搜索文字 + 搜索图片
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            fut_text = pool.submit(search_web, keyword)
+            fut_imgs = pool.submit(collect_images, keyword)
+            raw_content = fut_text.result(timeout=20)
+            images = fut_imgs.result(timeout=20)
 
-        # 2. AI 生成
+        # 2. 并行生成 3 张卡片（内部已并行）
         cards = ai_generate(keyword, raw_content, api_key)
-
-        # 3. 搜索图片（只搜一次，分配给所有卡片）
-        images = collect_images(keyword)
 
         for i, card in enumerate(cards):
             # 封面图：每张卡片分配不同图片
