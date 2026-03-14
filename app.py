@@ -147,51 +147,17 @@ def search_images_google(query, count=10):
     return imgs[:count]
 
 
-def collect_images(keyword, step_names):
-    """为封面和每个步骤搜索对应的图片"""
-    result = {"cover": [], "steps": {}}
-
-    # 封面图：搜索成品图
-    cover_queries = [
-        f"{keyword} 成品 编织",
-        f"{keyword} knitting finished",
-        f"{keyword} 手工编织 毛衣",
-    ]
-    for q in cover_queries:
-        result["cover"].extend(search_images_bing(q, count=6))
-        if len(result["cover"]) >= 5:
+def collect_images(keyword):
+    """一次搜索，收集足够多图片分配给封面和步骤"""
+    all_imgs = []
+    for q in [f"{keyword} 编织 成品 教程", f"{keyword} knitting pattern"]:
+        all_imgs.extend(search_images_bing(q, count=12))
+        if len(all_imgs) >= 10:
             break
-    if len(result["cover"]) < 3:
-        for q in cover_queries[:2]:
-            result["cover"].extend(search_images_google(q, count=5))
-
+    if len(all_imgs) < 5:
+        all_imgs.extend(search_images_google(f"{keyword} knitting", count=8))
     # 去重
-    result["cover"] = list(dict.fromkeys(result["cover"]))
-
-    # 每个步骤搜索对应图片
-    for step_name in step_names:
-        step_queries = [
-            f"{keyword} {step_name} 编织 图解",
-            f"{keyword} {step_name} knitting tutorial",
-        ]
-        step_imgs = []
-        for q in step_queries:
-            step_imgs.extend(search_images_bing(q, count=4))
-            if len(step_imgs) >= 3:
-                break
-        result["steps"][step_name] = list(dict.fromkeys(step_imgs))
-
-    return result
-
-
-def verify_image(url, timeout=5):
-    """验证图片链接是否可访问"""
-    try:
-        resp = requests.head(url, headers=HEADERS, timeout=timeout, allow_redirects=True)
-        ct = resp.headers.get("content-type", "")
-        return resp.status_code == 200 and ("image" in ct or url.endswith(('.jpg', '.jpeg', '.png', '.webp')))
-    except Exception:
-        return False
+    return list(dict.fromkeys(all_imgs))
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -201,9 +167,8 @@ def verify_image(url, timeout=5):
 def search_web(keyword):
     """搜索并收集文字内容"""
     queries = [
-        f"{keyword} 编织方法 教程 详细步骤",
-        f"{keyword} 织法 图解 针数",
-        f"{keyword} knitting pattern instructions",
+        f"{keyword} 编织方法 教程 步骤",
+        f"{keyword} knitting pattern tutorial",
     ]
     all_results = []
     for q in queries:
@@ -440,30 +405,19 @@ def search():
         # 2. AI 生成
         cards = ai_generate(keyword, raw_content, api_key)
 
-        # 3. 为每张卡片搜索图片
+        # 3. 搜索图片（只搜一次，分配给所有卡片）
+        images = collect_images(keyword)
+
         for i, card in enumerate(cards):
-            step_names = [s["phase"] for s in card.get("steps", [])]
-            images = collect_images(keyword + " " + card["title"], step_names)
+            # 封面图：每张卡片分配不同图片
+            card["image"] = images[i] if i < len(images) else ""
 
-            # 封面图
-            card["image"] = ""
-            for img_url in images["cover"]:
-                if verify_image(img_url):
-                    card["image"] = img_url
-                    break
+            # 步骤图：轮流分配剩余图片
+            offset = len(cards)
+            for j, step in enumerate(card.get("steps", [])):
+                img_idx = offset + i * 6 + j
+                step["image"] = images[img_idx % len(images)] if images else ""
 
-            # 步骤图
-            for step in card.get("steps", []):
-                step["image"] = ""
-                step_imgs = images["steps"].get(step["phase"], [])
-                # 如果步骤专属图没有，用封面剩余图
-                all_candidates = step_imgs + [u for u in images["cover"] if u != card["image"]]
-                for img_url in all_candidates:
-                    if verify_image(img_url):
-                        step["image"] = img_url
-                        break
-
-            # 生成 ID
             card["id"] = hashlib.md5(
                 f"{keyword}-{card['title']}-{i}-{time.time()}".encode()
             ).hexdigest()[:12]
@@ -471,6 +425,8 @@ def search():
         return jsonify({"cards": cards, "keyword": keyword})
 
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         return jsonify({"error": f"生成失败: {str(e)}"}), 500
 
 
