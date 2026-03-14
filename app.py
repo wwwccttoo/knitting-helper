@@ -350,7 +350,9 @@ def index():
             "steps_count": len(d.get("steps", [])),
             "created_at": row["created_at"],
         })
-    return render_template("index.html", username=session["username"], saved_cards=saved_cards)
+    user = db.execute("SELECT api_key FROM users WHERE id = ?", (session["user_id"],)).fetchone()
+    saved_api_key = user["api_key"] if user and user["api_key"] else ""
+    return render_template("index.html", username=session["username"], saved_cards=saved_cards, saved_api_key=saved_api_key)
 
 
 @app.route("/search", methods=["POST"])
@@ -363,7 +365,7 @@ def search():
     if not api_key:
         return jsonify({"error": "请输入 API Key"}), 400
 
-    # 保存 api_key 到用户记录
+    # 保存 api_key 到用户记录（下次自动填充）
     db = get_db()
     db.execute("UPDATE users SET api_key = ? WHERE id = ?", (api_key, session["user_id"]))
     db.commit()
